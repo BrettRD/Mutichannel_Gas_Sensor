@@ -71,113 +71,56 @@ void MutichannelGasSensor::begin() {
 ** Function name:           sendI2C
 ** Descriptions:            send one byte to I2C Wire
 *********************************************************************************************************/
-void MutichannelGasSensor::sendI2C(unsigned char dta) {
-    Wire.beginTransmission(i2cAddress);               // transmit to device #4
-    Wire.write(dta);                                    // sends one byte
-    Wire.endTransmission();                             // stop transmitting
-}
 
-
-unsigned int MutichannelGasSensor::get_addr_dta(unsigned char addr_reg) {
-START:
-    Wire.beginTransmission(i2cAddress);
-    Wire.write(addr_reg);
-    Wire.endTransmission();    // stop transmitting
-    delay(2);
-
-    Wire.requestFrom(i2cAddress, 2);
-
-    unsigned int dta = 0;
-
-    unsigned char raw[10];
-    int cnt = 0;
-
-    while (Wire.available()) {
-        raw[cnt++] = Wire.read();
-    }
-
-    if (cnt == 0) {
-        goto START;
-    }
-
-    dta = raw[0];
-    dta <<= 8;
-    dta += raw[1];
-
-    switch (addr_reg) {
-        case CH_VALUE_NH3:
-
-            if (dta > 0) {
-                adcValueR0_NH3_Buf = dta;
-            } else {
-                dta = adcValueR0_NH3_Buf;
-            }
-
-            break;
-
-        case CH_VALUE_CO:
-
-            if (dta > 0) {
-                adcValueR0_CO_Buf = dta;
-            } else {
-                dta = adcValueR0_CO_Buf;
-            }
-
-            break;
-
-        case CH_VALUE_NO2:
-
-            if (dta > 0) {
-                adcValueR0_NO2_Buf = dta;
-            } else {
-                dta = adcValueR0_NO2_Buf;
-            }
-
-            break;
-
-        default:;
-    }
-    return dta;
-}
-
-unsigned int MutichannelGasSensor::get_addr_dta(unsigned char addr_reg, unsigned char __dta) {
-
-START:
-    Wire.beginTransmission(i2cAddress);
-    Wire.write(addr_reg);
-    Wire.write(__dta);
-    Wire.endTransmission();    // stop transmitting
-    delay(2);
-
-    Wire.requestFrom(i2cAddress, 2);
-
-    unsigned int dta = 0;
-
-    unsigned char raw[10];
-    int cnt = 0;
-
-    while (Wire.available()) {
-        raw[cnt++] = Wire.read();
-    }
-
-    if (cnt == 0) {
-        goto START;
-    }
-
-    dta = raw[0];
-    dta <<= 8;
-    dta += raw[1];
-
-
-    return dta;
-}
 
 void MutichannelGasSensor::write_i2c(unsigned char addr, unsigned char* dta, unsigned char dta_len) {
     Wire.beginTransmission(addr);
-    for (int i = 0; i < dta_len; i++) {
-        Wire.write(dta[i]);
-    }
+    Wire.write(dta, len);
     Wire.endTransmission();
+}
+
+void MutichannelGasSensor::sendI2C(unsigned char *dta, unsigned char dta_len) {
+    write_i2c(i2cAddress, dta, dta_len);
+}
+
+void MutichannelGasSensor::sendI2C(unsigned char dta) {
+    write_i2c(i2cAddress, &dta, 1);
+}
+
+unsigned int MutichannelGasSensor::get_addr_dta(uint8_t *addr_str, size_t len) {
+START:
+    sendI2C(addr_str, len);
+    delay(2);
+
+    Wire.requestFrom(i2cAddress, (uint8_t)2);
+
+    unsigned int dta = 0;
+
+    unsigned char raw[10];
+    int cnt = 0;
+
+    while (Wire.available()) {
+        raw[cnt++] = Wire.read();
+    }
+
+    if (cnt == 0) {
+        goto START;
+    }
+
+    dta = raw[0];
+    dta <<= 8;
+    dta += raw[1];
+
+    return dta;
+}
+
+unsigned int MutichannelGasSensor::get_addr_dta(unsigned char addr_reg)
+{
+    return get_addr_dta(&addr_reg, 1);
+}
+unsigned int MutichannelGasSensor::get_addr_dta(unsigned char addr_reg, unsigned char __dta)
+{
+    return get_addr_dta((const uint8_t[]){addr_reg, __dta}, 2);
 }
 
 
@@ -312,9 +255,9 @@ float MutichannelGasSensor::calcGas(int gas) {
     } else if (2 == __version) {
         // how to calc ratio/123
         ledOn();
-        int A0_0 = get_addr_dta(6, ADDR_USER_ADC_HN3);
-        int A0_1 = get_addr_dta(6, ADDR_USER_ADC_CO);
-        int A0_2 = get_addr_dta(6, ADDR_USER_ADC_NO2);
+        int A0_0 = get_addr_dta(CMD_READ_EEPROM, ADDR_USER_ADC_HN3);
+        int A0_1 = get_addr_dta(CMD_READ_EEPROM, ADDR_USER_ADC_CO);
+        int A0_2 = get_addr_dta(CMD_READ_EEPROM, ADDR_USER_ADC_NO2);
 
         int An_0 = get_addr_dta(CH_VALUE_NH3);
         int An_1 = get_addr_dta(CH_VALUE_CO);
@@ -558,15 +501,15 @@ float MutichannelGasSensor::getRs(unsigned char ch) {       // 0:CH3, 1:CO, 2:NO
     int a = 0;
     switch (ch) {
         case 0:         // NH3
-            a = get_addr_dta(1);
+            a = get_addr_dta(CH_VALUE_NH3);
             break;
 
         case 1:         // CO
-            a = get_addr_dta(2);
+            a = get_addr_dta(CH_VALUE_CO);
             break;
 
         case 2:         // NO2
-            a = get_addr_dta(3);
+            a = get_addr_dta(CH_VALUE_NO2);
             break;
 
         default:;
@@ -641,7 +584,7 @@ void MutichannelGasSensor::change_i2c_address(unsigned char addr) {
     i2cAddress = addr;
 }
 
-MutichannelGasSensor gas;
+//MutichannelGasSensor gas; //don't declare that here.
 /*********************************************************************************************************
     END FILE
 *********************************************************************************************************/
