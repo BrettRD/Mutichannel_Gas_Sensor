@@ -169,7 +169,7 @@ int16_t MutichannelGasSensor::readData(uint8_t cmd) {
 int16_t MutichannelGasSensor::readR0(void) {
     int16_t rtnData = 0;
 
-    rtnData = readData(0x11);
+    rtnData = readData(CMD_ADC_RES0_DATUM);
 
     if (rtnData > 0) {
         res0[0] = rtnData;
@@ -177,14 +177,14 @@ int16_t MutichannelGasSensor::readR0(void) {
         return rtnData;    //unsuccessful
     }
 
-    rtnData = readData(0x12);
+    rtnData = readData(CMD_ADC_RES1_DATUM);
     if (rtnData > 0) {
         res0[1] = rtnData;
     } else {
         return rtnData;    //unsuccessful
     }
 
-    rtnData = readData(0x13);
+    rtnData = readData(CMD_ADC_RES2_DATUM);
     if (rtnData > 0) {
         res0[2] = rtnData;
     } else {
@@ -201,21 +201,21 @@ int16_t MutichannelGasSensor::readR0(void) {
 int16_t MutichannelGasSensor::readR(void) {
     int16_t rtnData = 0;
 
-    rtnData = readData(0x01);
+    rtnData = readData(CMD_ADC_RES0);
     if (rtnData >= 0) {
         res[0] = rtnData;
     } else {
         return rtnData;    //unsuccessful
     }
 
-    rtnData = readData(0x02);
+    rtnData = readData(CMD_ADC_RES1);
     if (rtnData >= 0) {
         res[1] = rtnData;
     } else {
         return rtnData;    //unsuccessful
     }
 
-    rtnData = readData(0x03);
+    rtnData = readData(CMD_ADC_RES2);
     if (rtnData >= 0) {
         res[2] = rtnData;
     } else {
@@ -225,17 +225,20 @@ int16_t MutichannelGasSensor::readR(void) {
     return 0;//successful
 }
 
-/*********************************************************************************************************
-** Function name:           readR
-** Descriptions:            calculate gas concentration of each channel from slave MCU
-** Parameters:
-                            gas - gas type
-** Returns:
-                            float value - concentration of the gas
-*********************************************************************************************************/
-float MutichannelGasSensor::calcGas(int gas) {
 
-    float ratio0, ratio1, ratio2;
+
+
+/*********************************************************************************************************
+** Function name:           sampleSensor
+** Descriptions:            sample the values at each channel from slave MCU
+** Parameters:
+                            
+** Returns:
+                            bool complete - if the read succeeded (not used)
+*********************************************************************************************************/
+
+
+bool MutichannelGasSensor::sample_sensor(){
     if (1 == __version) {
         if (!r0_inited) {
             if (readR0() >= 0) {
@@ -268,40 +271,55 @@ float MutichannelGasSensor::calcGas(int gas) {
         ratio2 = (float)An_2 / (float)A0_2 * (1023.0 - A0_2) / (1023.0 - An_2);
 
     }
+    return true;
 
+}
+
+
+
+/*********************************************************************************************************
+** Function name:           calcGas
+** Descriptions:            calculate gas concentration of each channel from slave MCU
+** Parameters:
+                            gas - gas type
+** Returns:
+                            float value - concentration of the gas
+*********************************************************************************************************/
+
+
+float MutichannelGasSensor::calcGas(int gas) {
     float c = 0;
-
     switch (gas) {
         case CO: {
-                c = pow(ratio1, -1.179) * 4.385; //mod by jack
+                c = measure_CO();
                 break;
             }
         case NO2: {
-                c = pow(ratio2, 1.007) / 6.855; //mod by jack
+                c = measure_NO2();
                 break;
             }
         case NH3: {
-                c = pow(ratio0, -1.67) / 1.47; //modi by jack
+                c = measure_NH3();
                 break;
             }
-        case C3H8: { //add by jack
-                c = pow(ratio0, -2.518) * 570.164;
+        case C3H8: {
+                c = measure_C3H8();
                 break;
             }
-        case C4H10: { //add by jack
-                c = pow(ratio0, -2.138) * 398.107;
+        case C4H10: {
+                c = measure_C4H10();
                 break;
             }
-        case CH4: { //add by jack
-                c = pow(ratio1, -4.363) * 630.957;
+        case CH4: {
+                c = measure_CH4();
                 break;
             }
-        case H2: { //add by jack
-                c = pow(ratio1, -1.8) * 0.73;
+        case H2: {
+                c = measure_H2();
                 break;
             }
-        case C2H5OH: { //add by jack
-                c = pow(ratio1, -1.552) * 1.622;
+        case C2H5OH: {
+                c = measure_C2H5OH();
                 break;
             }
         default:

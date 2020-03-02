@@ -80,6 +80,11 @@
 #define CMD_CONTROL_LED         10
 #define CMD_CONTROL_PWR         11
 
+#define CMD_ADC_RES0_DATUM      0x11        // NH3
+#define CMD_ADC_RES1_DATUM      0x12        // CO
+#define CMD_ADC_RES2_DATUM      0x13        // NO2
+
+
 enum {CO, NO2, NH3, C3H8, C4H10, CH4, H2, C2H5OH};
 
 class MutichannelGasSensor {
@@ -97,14 +102,23 @@ class MutichannelGasSensor {
     uint8_t i2cAddress;     //I2C address of this MCU
     uint16_t res0[3];       //sensors res0
     uint16_t res[3];        //sensors res
+
+    float ratio0, ratio1, ratio2;
+
     bool r0_inited;
 
     MutichannelGasSensor();
-    inline unsigned int get_addr_dta(unsigned char addr_reg);
-    inline unsigned int get_addr_dta(unsigned char addr_reg, unsigned char __dta);
+
+    unsigned int get_addr_dta(uint8_t *addr_str, size_t len);
+    unsigned int get_addr_dta(unsigned char addr_reg);
+    unsigned int get_addr_dta(unsigned char addr_reg, unsigned char __dta);
+
     inline void write_i2c(unsigned char addr, unsigned char* dta, unsigned char dta_len);
 
     void sendI2C(unsigned char dta);
+    void sendI2C(unsigned char *dta, unsigned char dta_len);
+
+
     int16_t readData(uint8_t cmd);
     int16_t readR0(void);
     int16_t readR(void);
@@ -121,28 +135,28 @@ class MutichannelGasSensor {
 
     //get gas concentration, unit: ppm
     float measure_CO() {
-        return calcGas(CO);
+        return pow(ratio1, -1.179) * 4.385;
     }
     float measure_NO2() {
-        return calcGas(NO2);
+        return pow(ratio2, 1.007) / 6.855;
     }
     float measure_NH3() {
-        return calcGas(NH3);
+        return pow(ratio0, -1.67) / 1.47;
     }
     float measure_C3H8() {
-        return calcGas(C3H8);
+        return pow(ratio0, -2.518) * 570.164;
     }
     float measure_C4H10() {
-        return calcGas(C4H10);
+        return pow(ratio0, -2.138) * 398.107;
     }
     float measure_CH4() {
-        return calcGas(CH4);
+        return pow(ratio1, -4.363) * 630.957;
     }
     float measure_H2() {
-        return calcGas(H2);
+        return pow(ratio1, -1.8) * 0.73;
     }
     float measure_C2H5OH() {
-        return calcGas(C2H5OH);
+        return pow(ratio1, -1.552) * 1.622;
     }
 
     float getR0(unsigned char ch);      // 0:CH3, 1:CO, 2:NO2
