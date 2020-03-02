@@ -73,13 +73,13 @@ void MutichannelGasSensor::begin() {
 *********************************************************************************************************/
 
 
-void MutichannelGasSensor::write_i2c(unsigned char addr, unsigned char* dta, unsigned char dta_len) {
+void MutichannelGasSensor::write_i2c(unsigned char addr, const unsigned char* dta, unsigned char dta_len) {
     Wire.beginTransmission(addr);
-    Wire.write(dta, len);
+    Wire.write(dta, dta_len);
     Wire.endTransmission();
 }
 
-void MutichannelGasSensor::sendI2C(unsigned char *dta, unsigned char dta_len) {
+void MutichannelGasSensor::sendI2C(const unsigned char *dta, unsigned char dta_len) {
     write_i2c(i2cAddress, dta, dta_len);
 }
 
@@ -87,7 +87,7 @@ void MutichannelGasSensor::sendI2C(unsigned char dta) {
     write_i2c(i2cAddress, &dta, 1);
 }
 
-unsigned int MutichannelGasSensor::get_addr_dta(uint8_t *addr_str, size_t len) {
+unsigned int MutichannelGasSensor::get_addr_dta(const uint8_t *addr_str, size_t len) {
 START:
     sendI2C(addr_str, len);
     delay(2);
@@ -120,7 +120,8 @@ unsigned int MutichannelGasSensor::get_addr_dta(unsigned char addr_reg)
 }
 unsigned int MutichannelGasSensor::get_addr_dta(unsigned char addr_reg, unsigned char __dta)
 {
-    return get_addr_dta((const uint8_t[]){addr_reg, __dta}, 2);
+    const uint8_t addr_str[2] = {addr_reg, __dta};
+    return get_addr_dta(addr_str, 2);
 }
 
 
@@ -238,7 +239,7 @@ int16_t MutichannelGasSensor::readR(void) {
 *********************************************************************************************************/
 
 
-bool MutichannelGasSensor::sample_sensor(){
+bool MutichannelGasSensor::sampleSensor(){
     if (1 == __version) {
         if (!r0_inited) {
             if (readR0() >= 0) {
@@ -279,7 +280,7 @@ bool MutichannelGasSensor::sample_sensor(){
 
 /*********************************************************************************************************
 ** Function name:           calcGas
-** Descriptions:            calculate gas concentration of each channel from slave MCU
+** Descriptions:            sample the sensor and calculate gas concentration for one type of gas
 ** Parameters:
                             gas - gas type
 ** Returns:
@@ -288,6 +289,7 @@ bool MutichannelGasSensor::sample_sensor(){
 
 
 float MutichannelGasSensor::calcGas(int gas) {
+    sampleSensor();
     float c = 0;
     switch (gas) {
         case CO: {

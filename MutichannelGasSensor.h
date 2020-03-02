@@ -100,28 +100,29 @@ class MutichannelGasSensor {
   public:
 
     uint8_t i2cAddress;     //I2C address of this MCU
-    uint16_t res0[3];       //sensors res0
-    uint16_t res[3];        //sensors res
+    uint16_t res0[3];       //sensors res0  //not used in V2 sensors
+    uint16_t res[3];        //sensors res   //not used in V2 sensors
 
-    float ratio0, ratio1, ratio2;
+    float ratio0, ratio1, ratio2;           //used for all sensors
 
     bool r0_inited;
 
     MutichannelGasSensor();
 
-    unsigned int get_addr_dta(uint8_t *addr_str, size_t len);
+    unsigned int get_addr_dta(const uint8_t *addr_str, size_t len);
     unsigned int get_addr_dta(unsigned char addr_reg);
     unsigned int get_addr_dta(unsigned char addr_reg, unsigned char __dta);
 
-    inline void write_i2c(unsigned char addr, unsigned char* dta, unsigned char dta_len);
+    inline void write_i2c(unsigned char addr, const unsigned char* dta, unsigned char dta_len);
 
     void sendI2C(unsigned char dta);
-    void sendI2C(unsigned char *dta, unsigned char dta_len);
+    void sendI2C(const unsigned char *dta, unsigned char dta_len);
 
 
     int16_t readData(uint8_t cmd);
     int16_t readR0(void);
     int16_t readR(void);
+    bool sampleSensor();
     float calcGas(int gas);
 
   public:
